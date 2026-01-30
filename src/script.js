@@ -87,6 +87,7 @@ function initHeaderScroll() {
 
 /**
  * スクロールアニメーション（Intersection Observer）
+ * GPU加速とCSS変数による滑らかなスタガーアニメーション
  */
 function initScrollAnimations() {
   const animatedElements = document.querySelectorAll('.animate-on-scroll');
@@ -95,25 +96,44 @@ function initScrollAnimations() {
 
   // Intersection Observer が使えない場合はすべて表示
   if (!('IntersectionObserver' in window)) {
-    animatedElements.forEach(el => el.classList.add('is-visible'));
+    animatedElements.forEach(el => {
+      el.style.setProperty('--stagger-delay', '0s');
+      el.classList.add('is-visible');
+    });
     return;
   }
 
+  // グループ単位で要素インデックスを計算してCSS変数を設定
+  const groupMap = new Map();
+  animatedElements.forEach(el => {
+    const group = el.closest('[data-stagger-group]') || el.parentElement;
+    if (!group) {
+      el.style.setProperty('--stagger-delay', '0s');
+      return;
+    }
+    if (!groupMap.has(group)) {
+      groupMap.set(group, []);
+    }
+    groupMap.get(group).push(el);
+  });
+
+  groupMap.forEach((elements) => {
+    elements.forEach((el, index) => {
+      el.style.setProperty('--stagger-delay', `${index * 0.08}s`);
+    });
+  });
+
   const observerOptions = {
     root: null,
-    rootMargin: '0px 0px -10% 0px',
-    threshold: 0.1
+    rootMargin: '0px 0px -5% 0px',
+    threshold: 0.15
   };
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        // 遅延を追加してスタガーアニメーション効果
-        const delay = entry.target.dataset.delay || 0;
-        setTimeout(() => {
-          entry.target.classList.add('is-visible');
-        }, delay);
-
+        // 即座にクラスを追加（遅延はCSS変数で制御）
+        entry.target.classList.add('is-visible');
         // 一度表示したら監視を解除
         observer.unobserve(entry.target);
       }
@@ -121,16 +141,7 @@ function initScrollAnimations() {
   }, observerOptions);
 
   // 各要素を監視
-  animatedElements.forEach((el, index) => {
-    // 同じ親要素内の要素にスタガー遅延を追加
-    const parent = el.parentElement;
-    const siblings = parent.querySelectorAll('.animate-on-scroll');
-    const siblingIndex = Array.from(siblings).indexOf(el);
-
-    if (siblingIndex > 0 && siblings.length > 1) {
-      el.dataset.delay = siblingIndex * 100;
-    }
-
+  animatedElements.forEach(el => {
     observer.observe(el);
   });
 }
