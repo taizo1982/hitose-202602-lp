@@ -550,7 +550,7 @@ async function processImages(html, dimensions) {
 }
 
 // favicon生成
-async function generateFavicons(srcDir, buildDir) {
+async function generateFavicons(srcDir, buildDir, env) {
   const faviconSrc = path.join(srcDir, "images", "favicon.png");
 
   try {
@@ -579,10 +579,14 @@ async function generateFavicons(srcDir, buildDir) {
   const icoPath = path.join(buildDir, "favicon.ico");
   await sharp(faviconSrc).resize(32, 32).toFile(icoPath);
 
-  faviconTags.push(`<link rel="icon" type="image/x-icon" href="/favicon.ico">`);
-  faviconTags.push(`<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">`);
-  faviconTags.push(`<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">`);
-  faviconTags.push(`<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">`);
+  // BASE_PATHを考慮したパス生成
+  const basePath = env.BASE_PATH || "";
+  const prefix = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
+
+  faviconTags.push(`<link rel="icon" type="image/x-icon" href="${prefix}/favicon.ico">`);
+  faviconTags.push(`<link rel="icon" type="image/png" sizes="16x16" href="${prefix}/favicon-16x16.png">`);
+  faviconTags.push(`<link rel="icon" type="image/png" sizes="32x32" href="${prefix}/favicon-32x32.png">`);
+  faviconTags.push(`<link rel="apple-touch-icon" sizes="180x180" href="${prefix}/apple-touch-icon.png">`);
 
   console.log("✓ Favicon generated");
   return `<!-- Favicon -->\n${faviconTags.join("\n")}`;
@@ -649,7 +653,7 @@ async function build() {
   // Favicon生成
   let faviconTags = "";
   try {
-    faviconTags = await generateFavicons(srcDir, buildDir);
+    faviconTags = await generateFavicons(srcDir, buildDir, env);
   } catch (error) {
     console.log(`  Favicon generation skipped: ${error.message}`);
   }
