@@ -305,6 +305,7 @@ function generateSingleStructuredData(type, env, html) {
           ? { url: env.BUSINESS_URL || env.OG_URL }
           : {}),
         ...(env.BUSINESS_PRICE_RANGE && { priceRange: env.BUSINESS_PRICE_RANGE }),
+        ...(env.BUSINESS_OPENING_HOURS && { openingHours: env.BUSINESS_OPENING_HOURS }),
         // addressとcityが両方存在する場合のみPostalAddressを生成
         ...(address && city && {
           address: {
@@ -345,18 +346,25 @@ function generateSingleStructuredData(type, env, html) {
     case "faqpage": {
       // FAQをHTMLから抽出
       const faqItems = [];
-      const faqRegex = /<summary[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/gi;
+      // .faq-item内のsummaryとanswerを抽出（class属性に他のクラスが含まれていても対応）
+      const faqRegex = /<details[^>]*class="[^"]*faq-item[^"]*"[^>]*>[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<div[^>]*class="[^"]*faq-answer[^"]*"[^>]*>([\s\S]*?)<\/div>[\s\S]*?<\/details>/gi;
       let match;
       while ((match = faqRegex.exec(html)) !== null) {
-        const question = match[1].trim();
-        const answer = match[2].trim();
-        if (question && answer) {
+        // HTMLタグを除去してテキストのみ抽出
+        const stripHtml = (str) => str.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+        // "Q" プレフィックスを除去
+        let question = stripHtml(match[1]);
+        question = question.replace(/^Q\s*/, "");
+        const answer = stripHtml(match[2]);
+        // "A" プレフィックスを除去
+        const cleanAnswer = answer.replace(/^A\s*/, "");
+        if (question && cleanAnswer) {
           faqItems.push({
             "@type": "Question",
             name: question,
             acceptedAnswer: {
               "@type": "Answer",
-              text: answer,
+              text: cleanAnswer,
             },
           });
         }
@@ -672,7 +680,9 @@ async function build() {
     // 構造化データを注入
     const structuredData = generateStructuredData(env, html);
     if (structuredData) {
-      html = html.replace("</head>", `${structuredData}\n</head>`);
+      // $は特殊文字なので$$でエスケープ
+      const escapedStructuredData = structuredData.replace(/\$/g, "$$$$");
+      html = html.replace("</head>", `${escapedStructuredData}\n</head>`);
     }
 
     // 画像処理（width/height、lazy loading、picture変換）
