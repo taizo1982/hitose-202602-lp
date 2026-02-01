@@ -11,10 +11,6 @@ Thumbs.db
 *.map
 *.tar.gz
 *.tgz
-*.env
-*.env.local
-*.env.development
-*.env.production
 .vscode/
 .idea/
 .claude/settings.json
