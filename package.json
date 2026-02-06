@@ -25,5 +25,8 @@
     "puppeteer": "^22.0.0",
     "sharp": "^0.33.5",
     "terser": "^5.31.0"
+  },
+  "dependencies": {
+    "@microsoft/clarity": "^1.0.2"
   }
 }
